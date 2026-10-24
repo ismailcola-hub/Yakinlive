@@ -21,7 +21,6 @@ import { BroadcastModal } from './components/BroadcastModal.tsx';
 import { CoinStoreModal } from './components/CoinStoreModal.tsx';
 import { GiftAnimationOverlay } from './components/GiftAnimationOverlay.tsx';
 import { ExportDownloadModal } from './components/ExportDownloadModal.tsx';
-import { AuthModal } from './components/AuthModal.tsx';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User>(loadUser);
@@ -34,7 +33,6 @@ export default function App() {
   const [isStoreOpen, setIsStoreOpen] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [activeMediaStream, setActiveMediaStream] = useState<MediaStream | null>(null);
 
   // Sound and Animations
@@ -209,14 +207,6 @@ export default function App() {
     }
   };
 
-  const handleLoginSuccess = (userPartial: Partial<User>) => {
-    setCurrentUser((prev) => ({
-      ...prev,
-      ...userPartial,
-      coins: prev.coins + 100, // +100 bonus jeton hediyesi
-    }));
-  };
-
   return (
     <div className="min-h-screen bg-[#0d0a18] text-white flex flex-col justify-between selection:bg-pink-500 selection:text-white">
       {/* Top Navigation */}
@@ -225,7 +215,6 @@ export default function App() {
         onOpenStore={() => setIsStoreOpen(true)}
         onStartBroadcast={() => setIsBroadcastModalOpen(true)}
         onOpenExport={() => setIsExportModalOpen(true)}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
         activeTab={activeTab}
@@ -281,7 +270,6 @@ export default function App() {
             onUpdateUser={handleUpdateUser}
             onOpenStore={() => setIsStoreOpen(true)}
             onOpenExport={() => setIsExportModalOpen(true)}
-            onOpenAuth={() => setIsAuthModalOpen(true)}
           />
         )}
 
@@ -337,13 +325,6 @@ export default function App() {
       <ExportDownloadModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-      />
-
-      {/* User Auth Modal (Google, Facebook, Phone) */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
       />
     </div>
   );
