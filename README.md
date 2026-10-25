@@ -1,5 +1,6 @@
 # Yakın Live ✦
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/a041e228-9400-4c00-9d05-b42bf07c0fb6/deploy-status)](https://app.netlify.com/projects/yakinlivesohbet/deploys)
 Canlı yayınlar, interaktif sohbet ve hediyeleşme platformu.
 
 ## 🌐 Canlı İnternet Yayını
