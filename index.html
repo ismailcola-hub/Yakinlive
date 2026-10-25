@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
   <head>
@@ -20,10 +21,43 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome (Sosyal Medya İkonları İçin) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Firebase SDK & Kimlik Doğrulama / Admin SMS Entegrasyon Modülü -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+      import { 
+        getAuth, 
+        GoogleAuthProvider, 
+        FacebookAuthProvider, 
+        signInWithPopup, 
+        signInWithEmailAndPassword, 
+        createUserWithEmailAndPassword 
+      } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+      import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+      // Firebase Proje Yapılandırmanız (Kendi bilgilerinizi buraya yazabilirsiniz)
+      const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "yakin-live.firebaseapp.com",
+        projectId: "yakin-live",
+        storageBucket: "yakin-live.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:abcdef"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      window.fbAuth = getAuth(app);
+      window.fbDb = getFirestore(app);
+      window.googleProvider = new GoogleAuthProvider();
+      window.facebookProvider = new FacebookAuthProvider();
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
