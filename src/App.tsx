@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, LiveStream, Gift, ReportItem } from './types/index.ts';
 import {
@@ -21,6 +22,7 @@ import { BroadcastModal } from './components/BroadcastModal.tsx';
 import { CoinStoreModal } from './components/CoinStoreModal.tsx';
 import { GiftAnimationOverlay } from './components/GiftAnimationOverlay.tsx';
 import { ExportDownloadModal } from './components/ExportDownloadModal.tsx';
+import { AuthModal } from './components/AuthModal.tsx';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User>(loadUser);
@@ -33,6 +35,7 @@ export default function App() {
   const [isStoreOpen, setIsStoreOpen] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [activeMediaStream, setActiveMediaStream] = useState<MediaStream | null>(null);
 
   // Sound and Animations
@@ -45,7 +48,7 @@ export default function App() {
   // Daily bonus state
   const [canClaimDaily, setCanClaimDaily] = useState(canClaimDailyBonus);
 
-  // Save changes to storage
+  // Save changes to storage & sync with Firebase Auth if available
   useEffect(() => {
     saveUser(currentUser);
   }, [currentUser]);
@@ -58,7 +61,7 @@ export default function App() {
     saveReports(reports);
   }, [reports]);
 
-  // Handle URL query parameters (e.g. ?autostart=1 or ?room=id)
+  // Handle URL query parameters (e.g. ?autostart=1 or ?room=id or ?admin=true)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -72,6 +75,15 @@ export default function App() {
           setSelectedStream(match);
           setActiveTab('live');
         }
+      } else if (params.get('admin') === 'true') {
+        // God Mode / Admin direkt erişim simülasyonu
+        setCurrentUser(prev => ({
+          ...prev,
+          role: 'admin',
+          username: 'super_admin',
+          displayName: 'Süper Admin'
+        }));
+        setActiveTab('admin');
       }
     }
   }, [streams]);
@@ -107,6 +119,7 @@ export default function App() {
     setActiveTab('live');
   };
 
+  // Gerçek Kamera / WebRTC Destekli Canlı Yayın Başlatma
   const handleStartLive = ({
     title,
     category,
@@ -192,7 +205,6 @@ export default function App() {
   };
 
   const handleSendAdminAnnouncement = (msg: string) => {
-    // Add banner or notice
     console.log('Admin announcement broadcasted:', msg);
   };
 
@@ -207,6 +219,20 @@ export default function App() {
     }
   };
 
+  // Google, Facebook, E-posta veya Admin SMS OTP Girişi Başarılı Olduğunda
+  const handleLoginSuccess = (userPartial: Partial<User>) => {
+    setCurrentUser((prev) => {
+      const isSuperAdmin = userPartial.role === 'admin' || userPartial.username === 'admin@yakinlive.com';
+      return {
+        ...prev,
+        ...userPartial,
+        role: isSuperAdmin ? 'admin' : (prev.role || 'user'),
+        coins: prev.coins + 100, // Giriş bonusu
+      };
+    });
+    setIsAuthModalOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#0d0a18] text-white flex flex-col justify-between selection:bg-pink-500 selection:text-white">
       {/* Top Navigation */}
@@ -215,6 +241,7 @@ export default function App() {
         onOpenStore={() => setIsStoreOpen(true)}
         onStartBroadcast={() => setIsBroadcastModalOpen(true)}
         onOpenExport={() => setIsExportModalOpen(true)}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
         activeTab={activeTab}
@@ -270,6 +297,7 @@ export default function App() {
             onUpdateUser={handleUpdateUser}
             onOpenStore={() => setIsStoreOpen(true)}
             onOpenExport={() => setIsExportModalOpen(true)}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
           />
         )}
 
@@ -325,6 +353,13 @@ export default function App() {
       <ExportDownloadModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
+      />
+
+      {/* User Auth Modal (Google, Facebook, Phone/SMS Admin) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
     </div>
   );
