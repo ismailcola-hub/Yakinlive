@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { User } from '../types/index.ts';
 import { Shield, Mail, Lock, Phone, CheckCircle, Smartphone } from 'lucide-react';
+git add .
+git commit -m "AuthModal dosyasi eklendi"
+git push origin main
 
 interface AuthModalProps {
   isOpen: boolean;
