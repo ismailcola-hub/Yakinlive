@@ -3,7 +3,7 @@ import { INITIAL_STREAMS, INITIAL_REPORTS } from '../data/mockStreams.ts';
 import { isDefaultAdminCredentials } from './logic.ts';
 
 const USER_KEY = 'yakin_live_user_v1';
-const STREAMS_KEY = 'yakin_live_streams_v1';
+const STREAMS_KEY = 'yakin_live_streams_v2';
 const REPORTS_KEY = 'yakin_live_reports_v1';
 const DAILY_BONUS_KEY = 'yakin_live_daily_bonus_v1';
 const ACCOUNTS_KEY = 'yakin_live_accounts_v1';
