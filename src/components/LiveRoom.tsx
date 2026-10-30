@@ -29,8 +29,8 @@ import {
   processGiftTransaction,
   createChatMessage,
   formatViewerCount,
-  createJoinNotificationMessage,
 } from '../utils/logic.ts';
+import { useRoom, RemotePeer } from '../utils/useRoom.ts';
 
 interface LiveRoomProps {
   stream: LiveStream;
@@ -52,6 +52,65 @@ interface FloatingHeartItem {
   color: string;
 }
 
+const RemoteVideo: React.FC<{ peer: RemotePeer }> = ({ peer }) => {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [needsTap, setNeedsTap] = useState(false);
+  const [hasVideo, setHasVideo] = useState(true);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.srcObject = peer.stream;
+    const tryPlay = () =>
+      el.play().then(
+        () => setNeedsTap(false),
+        () => setNeedsTap(true)
+      );
+    tryPlay();
+
+    const updateVideo = () =>
+      setHasVideo(peer.stream.getVideoTracks().some((t) => t.readyState === 'live' && !t.muted));
+    updateVideo();
+    peer.stream.addEventListener('addtrack', updateVideo);
+    peer.stream.getVideoTracks().forEach((t) => {
+      t.addEventListener('mute', updateVideo);
+      t.addEventListener('unmute', updateVideo);
+    });
+    return () => {
+      peer.stream.removeEventListener('addtrack', updateVideo);
+      peer.stream.getVideoTracks().forEach((t) => {
+        t.removeEventListener('mute', updateVideo);
+        t.removeEventListener('unmute', updateVideo);
+      });
+    };
+  }, [peer.stream]);
+
+  return (
+    <div className="relative w-full h-full bg-black/60 overflow-hidden">
+      <video ref={ref} autoPlay playsInline className="w-full h-full object-cover" />
+      {!hasVideo && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#1b152b] text-6xl">
+          {peer.avatar}
+        </div>
+      )}
+      <span className="absolute left-2 bottom-2 px-2 py-0.5 rounded-full bg-black/60 text-[10px] font-bold text-white">
+        {peer.name}
+      </span>
+      {needsTap && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            ref.current?.play().then(() => setNeedsTap(false)).catch(() => {});
+          }}
+          className="absolute inset-0 flex items-center justify-center bg-black/60 text-white text-xs font-black"
+        >
+          🔊 Sesi başlatmak için dokun
+        </button>
+      )}
+    </div>
+  );
+};
+
 export const LiveRoom: React.FC<LiveRoomProps> = ({
   stream,
   currentUser,
@@ -65,65 +124,50 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
   onToggleFollow,
   activeMediaStream,
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const room = useRoom(
+    stream.id,
+    {
+      name: currentUser.displayName || currentUser.username,
+      avatar: currentUser.avatar,
+      level: currentUser.level || 1,
+    },
+    stream.isUserBroadcasting ? activeMediaStream : null
+  );
+  const { messages, remotes, localStream, joiner, participants } = room;
+  const viewerCount = Math.max(1, participants.length);
   const [chatInput, setChatInput] = useState('');
-  const [viewerCount, setViewerCount] = useState(stream.viewerCount);
   const [likesCount, setLikesCount] = useState(stream.likesCount);
   const [floatingHearts, setFloatingHearts] = useState<FloatingHeartItem[]>([]);
   const [isReporting, setIsReporting] = useState(false);
   const [reportReason, setReportReason] = useState('Uygunsuz davranış');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Floating user entrance animation ribbon
-  const [recentJoinBanner, setRecentJoinBanner] = useState<{
-    name: string;
-    avatar: string;
-    level: number;
-  } | null>(null);
-
   // Broadcast media controls if user is host
-  const [isMicMuted, setIsMicMuted] = useState(false);
-  const [isVideoDisabled, setIsVideoDisabled] = useState(false);
+  const isMicMuted = !room.micOn;
+  const isVideoDisabled = !room.camOn;
   const [micLevel, setMicLevel] = useState<number>(0);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  // Announce user joining the room
+  // Kendi mikrofon seviyeni izle
   useEffect(() => {
-    const joinMsg = createJoinNotificationMessage(stream.id, currentUser);
-    setMessages((prev) => [...prev, joinMsg]);
-    setRecentJoinBanner({
-      name: currentUser.displayName || currentUser.username,
-      avatar: currentUser.avatar,
-      level: currentUser.level || 1,
+    if (!localStream) return;
+    const stopMonitor = monitorMicrophoneLevel(localStream, (level, speaking) => {
+      setMicLevel(level);
+      setIsSpeaking(speaking);
     });
-    playHeartSound();
-    const bannerTimer = setTimeout(() => {
-      setRecentJoinBanner(null);
-    }, 3800);
-    return () => clearTimeout(bannerTimer);
-  }, [stream.id]);
+    return () => {
+      stopMonitor();
+    };
+  }, [localStream]);
 
-  // Monitor microphone in real-time if active broadcast media stream is present
+  // Kendi kamerani bagla
   useEffect(() => {
-    if (stream.isUserBroadcasting && activeMediaStream) {
-      const stopMonitor = monitorMicrophoneLevel(activeMediaStream, (level, speaking) => {
-        setMicLevel(level);
-        setIsSpeaking(speaking);
-      });
-      return () => {
-        stopMonitor();
-      };
+    if (videoRef.current) {
+      videoRef.current.srcObject = localStream;
     }
-  }, [stream.isUserBroadcasting, activeMediaStream]);
-
-  // Connect local media stream if available
-  useEffect(() => {
-    if (stream.isUserBroadcasting && activeMediaStream && videoRef.current) {
-      videoRef.current.srcObject = activeMediaStream;
-    }
-  }, [stream.isUserBroadcasting, activeMediaStream]);
+  }, [localStream, remotes.length, isVideoDisabled]);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -131,59 +175,6 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   }, [messages]);
-
-  // Periodic simulated realistic viewer actions, joins & chat to give a living atmosphere
-  useEffect(() => {
-    const simulatedUsers = [
-      { name: 'Kaan', avatar: '⚡', level: 3, texts: ['Harika enerji! 🔥', 'Bugün nasılsın?', 'Selamlar'] },
-      { name: 'Zeynep', avatar: '🌙', level: 5, texts: ['Ses çok net geliyor ✨', 'Gül gönderdim! 🌹', 'Takipteyim'] },
-      { name: 'Burak', avatar: '🦁', level: 2, texts: ['Ooo yeni yayıncı mısın?', 'Keyifli yayınlar!', '👑'] },
-      { name: 'Ece', avatar: '🎀', level: 6, texts: ['Kalpleri dolduralım 💕', 'Müzik devam etsin!'] },
-    ];
-
-    const interval = setInterval(() => {
-      // Occasionally announce a new viewer joining with elegant entrance notification
-      if (Math.random() > 0.65) {
-        const joiningSim = simulatedUsers[Math.floor(Math.random() * simulatedUsers.length)];
-        const simJoinMsg = createJoinNotificationMessage(stream.id, {
-          id: 'sim_user_' + joiningSim.name,
-          username: joiningSim.name.toLowerCase(),
-          displayName: joiningSim.name,
-          avatar: joiningSim.avatar,
-          level: joiningSim.level,
-        });
-        setMessages((prev) => [...prev.slice(-40), simJoinMsg]);
-        setRecentJoinBanner({
-          name: joiningSim.name,
-          avatar: joiningSim.avatar,
-          level: joiningSim.level,
-        });
-        setTimeout(() => setRecentJoinBanner(null), 3200);
-      } else if (Math.random() > 0.35) {
-        const randomUser = simulatedUsers[Math.floor(Math.random() * simulatedUsers.length)];
-        const randomText = randomUser.texts[Math.floor(Math.random() * randomUser.texts.length)];
-        const newMsg: ChatMessage = {
-          id: 'sim_' + Date.now(),
-          streamId: stream.id,
-          senderId: 'sim_' + randomUser.name,
-          senderName: randomUser.name,
-          senderAvatar: randomUser.avatar,
-          senderLevel: randomUser.level,
-          text: randomText,
-          timestamp: Date.now(),
-        };
-        setMessages((prev) => [...prev.slice(-40), newMsg]);
-      }
-
-      // fluctuate viewer and likes slightly
-      setLikesCount((prev) => prev + Math.floor(Math.random() * 3));
-      if (Math.random() > 0.6) {
-        setViewerCount((prev) => Math.max(1, prev + (Math.random() > 0.4 ? 1 : -1)));
-      }
-    }, 4200);
-
-    return () => clearInterval(interval);
-  }, [stream.id]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -219,8 +210,11 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
     const text = chatInput.trim();
     if (!text) return;
 
-    const newMsg = createChatMessage(stream.id, currentUser, text);
-    setMessages((prev) => [...prev, newMsg]);
+    const { id: _id, ...newMsg } = createChatMessage(stream.id, {
+      ...currentUser,
+      id: room.meId,
+    }, text);
+    room.sendMessage(newMsg);
     setChatInput('');
     // award small XP for chatting
     const newXp = (currentUser.xp || 0) + 5;
@@ -241,10 +235,9 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
     onTriggerGiftAnimation(gift, currentUser.displayName || currentUser.username);
 
     // Chat announcement
-    const giftChat: ChatMessage = {
-      id: 'gift_msg_' + Date.now(),
+    const giftChat: Omit<ChatMessage, 'id'> = {
       streamId: stream.id,
-      senderId: currentUser.id,
+      senderId: room.meId,
       senderName: currentUser.displayName || currentUser.username,
       senderAvatar: currentUser.avatar,
       senderLevel: updatedUser.level,
@@ -258,7 +251,7 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
       timestamp: Date.now(),
     };
 
-    setMessages((prev) => [...prev, giftChat]);
+    room.sendMessage(giftChat);
     setLikesCount((prev) => prev + 25);
     showToast(`${gift.name} başarıyla gönderildi! 🎁`);
   };
@@ -273,23 +266,13 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
   };
 
   const handleToggleMic = () => {
-    if (activeMediaStream) {
-      activeMediaStream.getAudioTracks().forEach((track) => {
-        track.enabled = isMicMuted;
-      });
-    }
-    setIsMicMuted(!isMicMuted);
-    showToast(!isMicMuted ? 'Mikrofon sessize alındı 🔇' : 'Mikrofon açıldı 🎙️');
+    room.toggleMic();
+    showToast(room.micOn ? 'Mikrofon sessize alındı 🔇' : 'Mikrofon açıldı 🎙️');
   };
 
   const handleToggleVideo = () => {
-    if (activeMediaStream) {
-      activeMediaStream.getVideoTracks().forEach((track) => {
-        track.enabled = isVideoDisabled;
-      });
-    }
-    setIsVideoDisabled(!isVideoDisabled);
-    showToast(!isVideoDisabled ? 'Kamera kapatıldı (Sanal Görünüm)' : 'Kamera açıldı 🎥');
+    room.toggleCam();
+    showToast(room.camOn ? 'Kamera kapatıldı' : 'Kamera açıldı 🎥');
   };
 
   const handleSpeakerTest = () => {
@@ -310,52 +293,62 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
         className="absolute inset-0 z-0 overflow-hidden cursor-pointer"
         onClick={handleLikeTap}
       >
-        {stream.isUserBroadcasting && activeMediaStream ? (
+        {remotes.length > 0 ? (
+          <div
+            className={`w-full h-full grid gap-0.5 ${
+              remotes.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+            }`}
+          >
+            {remotes.slice(0, 4).map((peer) => (
+              <RemoteVideo key={peer.id} peer={peer} />
+            ))}
+          </div>
+        ) : localStream && localStream.getVideoTracks().length > 0 && !isVideoDisabled ? (
           <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            className={`w-full h-full object-cover transform -scale-x-100 ${
-              isVideoDisabled ? 'hidden' : 'block'
-            }`}
+            className="w-full h-full object-cover transform -scale-x-100"
           />
-        ) : null}
-
-        {/* Fallback Animated Stage Background */}
-        {(!stream.isUserBroadcasting || !activeMediaStream || isVideoDisabled) && (
+        ) : (
           <div
             className={`w-full h-full bg-gradient-to-b ${stream.bgGradient} flex flex-col items-center justify-center p-6 relative`}
           >
-            {/* Ambient glowing circles */}
             <div className="absolute w-72 h-72 rounded-full bg-pink-500/20 blur-3xl animate-pulse" />
             <div className="absolute w-60 h-60 rounded-full bg-purple-500/20 blur-2xl -bottom-10" />
-
-            {/* Host big face avatar */}
             <div className="relative z-10 flex flex-col items-center">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-700 p-1 shadow-2xl shadow-pink-500/30 animate-pulse">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-700 p-1 shadow-2xl shadow-pink-500/30">
                 <div className="w-full h-full rounded-full bg-[#1b152b] flex items-center justify-center text-6xl">
                   {stream.hostAvatar}
                 </div>
               </div>
               <h2 className="mt-3 text-xl font-black text-white text-center drop-shadow-md">
-                {stream.hostName}
+                {stream.roomName || stream.hostName}
               </h2>
               <p className="text-xs text-pink-200/90 text-center max-w-xs mt-1 drop-shadow">
-                {stream.title}
+                Odada henüz kimse yok. Birisi katılınca görüntü burada açılır.
               </p>
-
-              {/* Animated Equalizer soundwave bars */}
-              <div className="flex items-center gap-1.5 mt-5 h-8">
-                {[40, 75, 55, 95, 60, 85, 45, 90, 65].map((h, i) => (
-                  <div
-                    key={i}
-                    style={{ height: `${h}%` }}
-                    className="w-1.5 bg-gradient-to-t from-pink-500 to-cyan-400 rounded-full animate-pulse"
-                  />
-                ))}
-              </div>
             </div>
+          </div>
+        )}
+
+        {/* Kendi kamera önizlemen (başkası bağlandığında köşede) */}
+        {remotes.length > 0 && localStream && localStream.getVideoTracks().length > 0 && (
+          <div className="absolute right-3 top-20 z-20 w-24 h-32 rounded-xl overflow-hidden border-2 border-white/40 shadow-xl bg-black">
+            {isVideoDisabled ? (
+              <div className="w-full h-full flex items-center justify-center text-3xl bg-[#1b152b]">
+                {currentUser.avatar}
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover transform -scale-x-100"
+              />
+            )}
           </div>
         )}
 
@@ -391,7 +384,7 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
 
           <div className="flex flex-col">
             <span className="text-xs font-black text-white flex items-center gap-1">
-              {stream.hostName}
+              {stream.roomName || stream.hostName}
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
             </span>
             <span className="text-[10px] text-pink-200 flex items-center gap-1">
@@ -462,11 +455,11 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
       </div>
 
       {/* Broadcast controls if user is the streamer */}
-      {stream.isUserBroadcasting && (
+      {(
         <div className="relative z-20 mx-3 mt-2 p-2.5 rounded-2xl bg-black/70 backdrop-blur-md border border-pink-500/40 flex items-center justify-between shadow-xl">
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded-full bg-rose-600 text-[10px] font-black uppercase text-white animate-pulse">
-              ● YAYINDASINIZ
+              ● BAĞLI
             </span>
             {isSpeaking ? (
               <span className="text-[10px] text-emerald-400 font-extrabold flex items-center gap-1">
@@ -512,13 +505,22 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
               <Volume2 className="w-3.5 h-3.5" />
             </button>
 
-            <button
-              onClick={() => onEndBroadcast && onEndBroadcast(stream.id)}
-              className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-extrabold shadow-sm active:scale-95 transition-all"
-            >
-              Yayını Bitir
-            </button>
+            {stream.isUserBroadcasting && (
+              <button
+                onClick={() => onEndBroadcast && onEndBroadcast(stream.id)}
+                className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-extrabold shadow-sm active:scale-95 transition-all"
+              >
+                Yayını Bitir
+              </button>
+            )}
           </div>
+        </div>
+      )}
+
+      {(room.mediaError || room.connError) && (
+        <div className="relative z-30 mx-3 mt-2 px-3 py-2 rounded-xl bg-amber-500/90 text-black text-[11px] font-bold">
+          {room.mediaError && <div>📷 {room.mediaError}</div>}
+          {room.connError && <div>⚠️ {room.connError}</div>}
         </div>
       )}
 
@@ -533,16 +535,16 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
       {/* BOTTOM SECTION: CHAT & GIFTS */}
       <div className="relative z-20 px-3 pb-2 flex flex-col justify-end">
         {/* Floating Luxury Entrance Ribbon Animation */}
-        {recentJoinBanner && (
+        {joiner && (
           <div className="mb-2 pointer-events-none animate-in slide-in-from-left-8 fade-in duration-500">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-600/90 via-pink-600/90 to-purple-700/90 border border-emerald-300/70 shadow-2xl shadow-pink-500/25 backdrop-blur-xl text-white">
               <span className="text-sm animate-pulse">✨</span>
-              <span className="text-sm">{recentJoinBanner.avatar}</span>
+              <span className="text-sm">{joiner.avatar}</span>
               <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[9px] font-black">
-                Lv.{recentJoinBanner.level}
+                Lv.{joiner.level}
               </span>
               <span className="text-xs font-black text-white">
-                {recentJoinBanner.name}
+                {joiner.name}
               </span>
               <span className="text-[11px] font-bold text-emerald-200">
                 yayına katıldı! 👋
