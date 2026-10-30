@@ -158,6 +158,7 @@ export default function App() {
     const userStreamId = 'stream_user_' + Date.now();
     const newStream: LiveStream = {
       id: userStreamId,
+      roomName: title,
       hostId: currentUser.id,
       hostName: currentUser.displayName || currentUser.username,
       hostAvatar: currentUser.avatar,
