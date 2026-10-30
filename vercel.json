@@ -1,9 +1,8 @@
 {
   "rewrites": [
-    { "source": "/yakin-live-guncel.zip", "destination": "/yakin-live-guncel.zip" },
-    { "source": "/yakin-live.zip", "destination": "/yakin-live.zip" },
-    { "source": "/indir.html", "destination": "/indir.html" },
-    { "source": "/download.html", "destination": "/download.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!assets/|.*\\..*).*)",
+      "destination": "/index.html"
+    }
   ]
 }

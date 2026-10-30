@@ -1,63 +1,18 @@
-
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Yakın Live</title>
-    <meta name="description" content="Canlı yayınlar, interaktif sohbet ve hediyeleşme platformu. Canlı yayın aç, izle, jeton kazan ve yeni insanlarla tanış!" />
+    <meta name="description" content="Canlı yayın topluluğu, interaktif sohbet, hediyeleşme ve gelişmiş yönetici kontrol paneli." />
     <meta property="og:title" content="Yakın Live" />
-    <meta property="og:description" content="Canlı yayınlar, interaktif sohbet ve hediyeleşme platformu. Canlı yayın aç, izle, jeton kazan ve yeni insanlarla tanış!" />
+    <meta property="og:description" content="Canlı yayın topluluğu, interaktif sohbet, hediyeleşme ve gelişmiş yönetici kontrol paneli." />
     <meta property="og:type" content="website" />
-    <meta name="theme-color" content="#100d1b" />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Yakın Live" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- FontAwesome (Sosyal Medya İkonları İçin) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   </head>
   <body>
     <div id="root"></div>
-
-    <!-- Firebase SDK & Kimlik Doğrulama / Admin SMS Entegrasyon Modülü -->
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-      import { 
-        getAuth, 
-        GoogleAuthProvider, 
-        FacebookAuthProvider, 
-        signInWithPopup, 
-        signInWithEmailAndPassword, 
-        createUserWithEmailAndPassword 
-      } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-      import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-      // Firebase Proje Yapılandırmanız (Kendi bilgilerinizi buraya yazabilirsiniz)
-      const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "yakin-live.firebaseapp.com",
-        projectId: "yakin-live",
-        storageBucket: "yakin-live.appspot.com",
-        messagingSenderId: "123456789",
-        appId: "1:123456789:web:abcdef"
-      };
-
-      const app = initializeApp(firebaseConfig);
-      window.fbAuth = getAuth(app);
-      window.fbDb = getFirestore(app);
-      window.googleProvider = new GoogleAuthProvider();
-      window.facebookProvider = new FacebookAuthProvider();
-    </script>
-
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+

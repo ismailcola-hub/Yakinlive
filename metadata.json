@@ -1,6 +1,6 @@
 {
   "name": "Yakın Live",
-  "description": "Canlı yayınlar, interaktif sohbet ve hediyeleşme platformu. Canlı yayın aç, izle, jeton kazan ve yeni insanlarla tanış!",
+  "description": "Canlı yayın topluluğu, interaktif sohbet, hediyeleşme ve gelişmiş yönetici kontrol paneli.",
   "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
