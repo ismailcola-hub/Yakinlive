@@ -36,6 +36,7 @@ export interface UserAccount {
 
 export interface LiveStream {
   id: string;
+  roomName?: string;
   hostId: string;
   hostName: string;
   hostAvatar: string;
