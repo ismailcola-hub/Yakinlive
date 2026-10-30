@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Radio,
@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { LiveStream } from '../types/index.ts';
+import { subscribeParticipants } from '../utils/realtime.ts';
 import { filterStreams, formatViewerCount } from '../utils/logic.ts';
 
 interface DiscoverViewProps {
@@ -44,6 +45,21 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isHeroDismissed, setIsHeroDismissed] = useState(false);
+
+  // Odalardaki gerçek kişi sayısı (Firestore)
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const idsKey = streams.map((s) => s.id).join('|');
+  useEffect(() => {
+    const unsubs = streams.map((s) =>
+      subscribeParticipants(
+        s.id,
+        (list) => setCounts((prev) => ({ ...prev, [s.id]: list.length })),
+        () => {}
+      )
+    );
+    return () => unsubs.forEach((u) => u());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsKey]);
 
   const filteredStreams = filterStreams(streams, activeCategory, searchQuery);
 
@@ -166,7 +182,7 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
               </span>
 
               <span className="px-2 py-0.5 rounded-full bg-black/45 backdrop-blur-sm text-[10px] font-bold text-white">
-                👁 {formatViewerCount(stream.viewerCount)}
+                👁 {formatViewerCount(counts[stream.id] ?? 0)}
               </span>
             </div>
 
@@ -175,6 +191,9 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
               <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-4xl shadow-xl group-hover:scale-110 transition-transform">
                 {stream.hostAvatar}
               </div>
+              <span className="mt-2 max-w-full px-2.5 py-0.5 rounded-full bg-black/35 backdrop-blur-sm text-[11px] font-black text-white text-center truncate drop-shadow">
+                {stream.roomName || stream.title}
+              </span>
             </div>
 
             {/* Bottom Card Footer */}
