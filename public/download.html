@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Yakın Live - Güncel Projeyi Telefona İndir</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background: #0d0a18;
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #171128;
+      border: 1px solid rgba(255, 79, 145, 0.35);
+      border-radius: 28px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 79, 145, 0.15);
+      text-align: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 5px 14px;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+    .icon-box {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 16px;
+      background: linear-gradient(135deg, #ff4f91, #9a68ff);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      box-shadow: 0 10px 25px rgba(255, 79, 145, 0.35);
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+    h1 span {
+      background: linear-gradient(90deg, #ff4f91, #9a68ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p.desc {
+      color: #c4b5fd;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 22px;
+    }
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(90deg, #ff4f91, #9a68ff);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 800;
+      text-decoration: none;
+      border-radius: 18px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(255, 79, 145, 0.4);
+      transition: all 0.2s;
+    }
+    .btn-download:active {
+      transform: scale(0.97);
+    }
+    .btn-share {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 13px;
+      background: #251b3d;
+      color: #e9d5ff;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .btn-share:active {
+      background: #322552;
+    }
+    .status-msg {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #a7f3d0;
+      font-weight: bold;
+    }
+    .info-card {
+      margin-top: 20px;
+      background: #110c1f;
+      border: 1px solid #2e2246;
+      border-radius: 16px;
+      padding: 14px;
+      text-align: left;
+      font-size: 12px;
+      color: #d8b4fe;
+    }
+    .info-card strong {
+      color: #ffffff;
+    }
+    .info-card ol {
+      padding-left: 18px;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 18px;
+      font-size: 13px;
+      color: #f472b6;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navigation Bar to go back home -->
+  <div style="width:100%; max-width:440px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+    <a href="/" style="display:flex; align-items:center; gap:6px; color:#f472b6; text-decoration:none; font-weight:800; font-size:13px; background:rgba(255,79,145,0.15); border:1px solid rgba(255,79,145,0.4); padding:8px 16px; border-radius:14px;">
+      ← Ana Sayfaya Dön
+    </a>
+    <a href="/" title="Kapat ve Ana Sayfaya Dön" style="color:#ffffff; font-size:16px; text-decoration:none; font-weight:900; background:#241c38; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.2);">
+      ✕
+    </a>
+  </div>
+
+  <div class="card">
+    <span class="badge">✓ Güncel ve Test Edilmiş Sürüm</span>
+    
+    <div class="icon-box">📦</div>
+
+    <h1><span>Yakın Live</span> Proje Arşivi</h1>
+    <p class="desc">
+      Tüm admin paneli, üyelik, şifre doğrulama, canlı yayın, ses ve kamera test kodlarını içeren güncel paket.
+    </p>
+
+    <!-- Main Download Action -->
+    <a href="/yakin-live-guncel.zip" download="yakin-live-guncel.zip" id="downloadBtn" class="btn-download">
+      <span>📥 TELEFONA İNDİR (.ZIP)</span>
+    </a>
+
+    <!-- Native Mobile Share Button -->
+    <button type="button" id="shareBtn" class="btn-share">
+      <span>📲 Telefonda Paylaş (Drive / WhatsApp / Dosyalar)</span>
+    </button>
+
+    <div id="statusNotice" class="status-msg">İndirme otomatik başlatılıyor...</div>
+
+    <!-- Instructions for Phone -->
+    <div class="info-card">
+      <strong>📱 Telefonunuza İndirdikten Sonra:</strong>
+      <ol>
+        <li>İndirilen dosya telefonunuzda <strong>İndirilenler (Downloads)</strong> klasörüne kaydedilir.</li>
+        <li><strong>Android:</strong> "Dosyalarım" uygulamasını açarak ZIP'e dokunup "Çıkart" diyebilirsiniz.</li>
+        <li><strong>iPhone:</strong> "Dosyalar" uygulamasında "İndirilenler" klasöründen ZIP arşivine dokunarak açabilirsiniz.</li>
+        <li><strong>Yönetici Şifresi:</strong> <code style="color:#f472b6; font-weight:bold;">admin123</code></li>
+      </ol>
+    </div>
+
+    <!-- Bottom prominent return button -->
+    <div style="margin-top: 18px;">
+      <a href="/" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:14px; background:#231a38; color:#ffffff; border:1px solid rgba(255,79,145,0.4); border-radius:16px; text-decoration:none; font-weight:800; font-size:13px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        ← Yakın Live Canlı Uygulamasına Dön
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Trigger download automatically on page load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        try {
+          const dlLink = document.getElementById('downloadBtn');
+          if (dlLink) {
+            dlLink.click();
+            document.getElementById('statusNotice').innerText = '✓ İndirme tetiklendi! Dosya telefonunuza iniyor.';
+          }
+        } catch (e) {
+          document.getElementById('statusNotice').innerText = 'Yukarıdaki yeşil butona basarak indirebilirsiniz.';
+        }
+      }, 1200);
+    });
+
+    // Native mobile sharing
+    document.getElementById('shareBtn').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/yakin-live-guncel.zip');
+        const blob = await res.blob();
+        const file = new File([blob], 'yakin-live-guncel.zip', { type: 'application/zip' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Yakın Live Güncel Proje ZIP',
+            text: 'Yakın Live canlı yayın projesi tam kaynak kodları',
+            files: [file],
+          });
+        } else if (navigator.share) {
+          await navigator.share({
+            title: 'Yakın Live Güncel Proje İndir',
+            url: window.location.origin + '/yakin-live-guncel.zip',
+          });
+        } else {
+          document.getElementById('downloadBtn').click();
+        }
+      } catch (err) {
+        document.getElementById('downloadBtn').click();
+      }
+    });
+  </script>
+</body>
+</html>
