@@ -23,14 +23,22 @@ import { GiftAnimationOverlay } from './components/GiftAnimationOverlay.tsx';
 import { ExportDownloadModal } from './components/ExportDownloadModal.tsx';
 import { AuthModal } from './components/AuthModal.tsx';
 import { NotificationModal } from './components/NotificationModal.tsx';
+import { DirectMessagesView } from './components/DirectMessagesView.tsx';
 import { sendLiveBroadcastNotification } from './utils/notifications.ts';
+import { INITIAL_CONVERSATIONS, INITIAL_DIRECT_MESSAGES, GIFTS } from './data/mockStreams.ts';
+import { DirectChatConversation, DirectMessage } from './types/index.ts';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User>(loadUser);
   const [streams, setStreams] = useState<LiveStream[]>(loadStreams);
   const [reports, setReports] = useState<ReportItem[]>(loadReports);
-  const [activeTab, setActiveTab] = useState<'discover' | 'live' | 'profile' | 'admin'>('discover');
+  const [activeTab, setActiveTab] = useState<'discover' | 'live' | 'profile' | 'admin' | 'messages'>('discover');
   const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
+
+  // Birebir Özel Sohbetler (DM) State
+  const [conversations, setConversations] = useState<DirectChatConversation[]>(INITIAL_CONVERSATIONS);
+  const [directMessages, setDirectMessages] = useState<Record<string, DirectMessage[]>>(INITIAL_DIRECT_MESSAGES);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   // Modals
   const [isStoreOpen, setIsStoreOpen] = useState(false);
@@ -241,7 +249,165 @@ export default function App() {
       }
       setActiveTab('live');
     } else {
-      setActiveTab(tab as 'discover' | 'live' | 'profile' | 'admin');
+      setActiveTab(tab as any);
+    }
+  };
+
+  // Birebir Özel Mesaj Başlatma (Herhangi bir yayıncı veya profilden)
+  const handleOpenDirectChat = (
+    hostId: string,
+    hostName: string,
+    hostAvatar: string,
+    hostLevel?: number
+  ) => {
+    let conv = conversations.find((c) => c.participantId === hostId || c.id === hostId);
+    if (!conv) {
+      const newConv: DirectChatConversation = {
+        id: 'conv_' + hostId,
+        participantId: hostId,
+        participantName: hostName,
+        participantAvatar: hostAvatar,
+        participantLevel: hostLevel || 22,
+        lastMessage: 'Sohbet başlatıldı 👋',
+        lastTimestamp: Date.now(),
+        unreadCount: 0,
+        isOnline: true,
+      };
+      setConversations((prev) => [newConv, ...prev]);
+      conv = newConv;
+    }
+    setActiveChatId(conv.id);
+    setActiveTab('messages');
+  };
+
+  // Birebir Özel Mesaj Gönderme
+  const handleSendDirectMessage = (chatId: string, text: string) => {
+    const newMsg: DirectMessage = {
+      id: 'dm_' + Date.now(),
+      chatId,
+      senderId: currentUser.id,
+      senderName: currentUser.displayName || currentUser.username,
+      senderAvatar: currentUser.avatar,
+      text,
+      timestamp: Date.now(),
+    };
+
+    setDirectMessages((prev) => ({
+      ...prev,
+      [chatId]: [...(prev[chatId] || []), newMsg],
+    }));
+
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === chatId
+          ? { ...c, lastMessage: text, lastTimestamp: Date.now(), unreadCount: 0 }
+          : c
+      )
+    );
+
+    // Canlı Yayıncıdan Doğal Otomatik Cevap Simülasyonu
+    const conv = conversations.find((c) => c.id === chatId);
+    if (conv) {
+      setTimeout(() => {
+        const replies = [
+          'Selam! Mesajın için teşekkürler, birazdan canlı yayınıma da bekliyorum 🥰',
+          'Çok incesin, seni yayında da görmek isterim! Takipte kal ❤️',
+          'Harikasın! Yakın Live ailesine hoş geldin, sohbet etmek çok keyifli ✨',
+          'Mesajını aldım canım, canlı yayın açtığımda ilk sana bildirim gelsin 🎙️💖',
+        ];
+        const randomReply = replies[Math.floor(Math.random() * replies.length)];
+        const hostReply: DirectMessage = {
+          id: 'dm_reply_' + Date.now(),
+          chatId,
+          senderId: conv.participantId,
+          senderName: conv.participantName,
+          senderAvatar: conv.participantAvatar,
+          text: randomReply,
+          timestamp: Date.now(),
+        };
+
+        setDirectMessages((prev) => ({
+          ...prev,
+          [chatId]: [...(prev[chatId] || []), hostReply],
+        }));
+
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === chatId
+              ? { ...c, lastMessage: randomReply, lastTimestamp: Date.now() }
+              : c
+          )
+        );
+      }, 1200);
+    }
+  };
+
+  // Birebir Özel Hediye Gönderme
+  const handleSendDirectGift = (chatId: string, giftId: string) => {
+    const foundGift = GIFTS.find((g) => g.id === giftId);
+    if (!foundGift) return;
+
+    if (currentUser.coins < foundGift.cost) {
+      setIsStoreOpen(true);
+      return;
+    }
+
+    setCurrentUser((prev) => ({
+      ...prev,
+      coins: Math.max(0, prev.coins - foundGift.cost),
+      diamonds: (prev.diamonds || 0) + (foundGift.diamondsReward || 0),
+      xp: (prev.xp || 0) + Math.floor(foundGift.cost * 1.5),
+    }));
+
+    const giftMsg: DirectMessage = {
+      id: 'dm_gift_' + Date.now(),
+      chatId,
+      senderId: currentUser.id,
+      senderName: currentUser.displayName || currentUser.username,
+      senderAvatar: currentUser.avatar,
+      text: `${foundGift.name} hediyesi gönderildi!`,
+      isGift: true,
+      giftIcon: foundGift.icon,
+      timestamp: Date.now(),
+    };
+
+    setDirectMessages((prev) => ({
+      ...prev,
+      [chatId]: [...(prev[chatId] || []), giftMsg],
+    }));
+
+    setActiveAnimatedGift({
+      gift: foundGift,
+      senderName: currentUser.displayName || currentUser.username,
+    });
+
+    // Hediye Teşekkür Cevabı
+    const conv = conversations.find((c) => c.id === chatId);
+    if (conv) {
+      setTimeout(() => {
+        const giftReply: DirectMessage = {
+          id: 'dm_gift_reply_' + Date.now(),
+          chatId,
+          senderId: conv.participantId,
+          senderName: conv.participantName,
+          senderAvatar: conv.participantAvatar,
+          text: `Aaa inanamıyorum! ${foundGift.name} hediyesi için sonsuz teşekkürler birtanem! 🎁💖🥰`,
+          timestamp: Date.now(),
+        };
+
+        setDirectMessages((prev) => ({
+          ...prev,
+          [chatId]: [...(prev[chatId] || []), giftReply],
+        }));
+
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === chatId
+              ? { ...c, lastMessage: `🎁 ${foundGift.name} için teşekkürler!`, lastTimestamp: Date.now() }
+              : c
+          )
+        );
+      }, 1000);
     }
   };
 
@@ -322,22 +488,24 @@ export default function App() {
         </div>
       )}
 
-      {/* Top Navigation */}
-      <Navbar
-        user={currentUser}
-        onOpenStore={() => setIsStoreOpen(true)}
-        onStartBroadcast={() => setIsBroadcastModalOpen(true)}
-        onOpenExport={() => setIsExportModalOpen(true)}
-        onOpenAuth={() => {
-          setAuthModalMode('login');
-          setIsAuthModalOpen(true);
-        }}
-        onOpenNotifications={() => setIsNotificationModalOpen(true)}
-        isMuted={isMuted}
-        onToggleMute={handleToggleMute}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
+      {/* Top Navigation (Hide when inside an active 1-on-1 conversation for native full-screen chat experience) */}
+      {!(activeTab === 'messages' && activeChatId) && (
+        <Navbar
+          user={currentUser}
+          onOpenStore={() => setIsStoreOpen(true)}
+          onStartBroadcast={() => setIsBroadcastModalOpen(true)}
+          onOpenExport={() => setIsExportModalOpen(true)}
+          onOpenAuth={() => {
+            setAuthModalMode('login');
+            setIsAuthModalOpen(true);
+          }}
+          onOpenNotifications={() => setIsNotificationModalOpen(true)}
+          isMuted={isMuted}
+          onToggleMute={handleToggleMute}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
+      )}
 
       {/* Main Body Routing */}
       <main className="flex-1 w-full max-w-lg mx-auto">
@@ -351,6 +519,7 @@ export default function App() {
               setIsAuthModalOpen(true);
             }}
             currentUserRole={currentUser.role}
+            onOpenDirectChat={handleOpenDirectChat}
           />
         )}
 
@@ -370,6 +539,7 @@ export default function App() {
               isFollowing={followedHostIds.includes(selectedStream.hostId)}
               onToggleFollow={handleToggleFollow}
               activeMediaStream={activeMediaStream}
+              onOpenDirectChat={handleOpenDirectChat}
             />
           ) : (
             <div className="text-center py-20 px-4">
@@ -397,6 +567,19 @@ export default function App() {
               setAuthModalMode('login');
               setIsAuthModalOpen(true);
             }}
+            onOpenMessages={() => setActiveTab('messages')}
+          />
+        )}
+
+        {activeTab === 'messages' && (
+          <DirectMessagesView
+            conversations={conversations}
+            currentUser={currentUser}
+            onSendDirectMessage={handleSendDirectMessage}
+            onSendDirectGift={handleSendDirectGift}
+            activeChatId={activeChatId}
+            onSelectChat={setActiveChatId}
+            messages={directMessages}
           />
         )}
 
@@ -420,13 +603,15 @@ export default function App() {
         )}
       </main>
 
-      {/* Bottom Navigation */}
-      <BottomNav
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        onStartBroadcast={() => setIsBroadcastModalOpen(true)}
-        hasActiveBroadcast={!!streams.find((s) => s.isUserBroadcasting)}
-      />
+      {/* Bottom Navigation (Hide when inside an active 1-on-1 conversation) */}
+      {!(activeTab === 'messages' && activeChatId) && (
+        <BottomNav
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          onStartBroadcast={() => setIsBroadcastModalOpen(true)}
+          hasActiveBroadcast={!!streams.find((s) => s.isUserBroadcasting)}
+        />
+      )}
 
       {/* Broadcast Creator Modal */}
       <BroadcastModal
