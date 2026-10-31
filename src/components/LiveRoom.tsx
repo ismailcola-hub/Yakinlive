@@ -15,9 +15,12 @@ import {
   UserCheck,
   Volume2,
   Activity,
+  Gift as GiftIcon,
+  MessageCircle,
 } from 'lucide-react';
 import { LiveStream, User, ChatMessage, Gift } from '../types/index.ts';
 import { GIFTS } from '../data/mockStreams.ts';
+import { GiftDrawer } from './GiftDrawer.tsx';
 import {
   playHeartSound,
   playGiftFanfare,
@@ -44,6 +47,7 @@ interface LiveRoomProps {
   isFollowing: boolean;
   onToggleFollow: (hostId: string) => void;
   activeMediaStream?: MediaStream | null;
+  onOpenDirectChat?: (hostId: string, hostName: string, hostAvatar: string, hostLevel?: number) => void;
 }
 
 interface FloatingHeartItem {
@@ -123,6 +127,7 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
   isFollowing,
   onToggleFollow,
   activeMediaStream,
+  onOpenDirectChat,
 }) => {
   const room = useRoom(
     stream.id,
@@ -141,6 +146,7 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
   const [isReporting, setIsReporting] = useState(false);
   const [reportReason, setReportReason] = useState('Uygunsuz davranış');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isGiftDrawerOpen, setIsGiftDrawerOpen] = useState(false);
 
   // Broadcast media controls if user is host
   const isMicMuted = !room.micOn;
@@ -415,6 +421,24 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
               )}
             </button>
           )}
+
+          {!stream.isUserBroadcasting && onOpenDirectChat && (
+            <button
+              onClick={() =>
+                onOpenDirectChat(
+                  stream.hostId,
+                  stream.hostName,
+                  stream.hostAvatar,
+                  stream.hostLevel || 26
+                )
+              }
+              className="ml-1 p-1.5 rounded-full bg-pink-500/30 hover:bg-pink-500/50 text-pink-300 border border-pink-500/40 active:scale-95 transition-all shadow-sm"
+              title="Yayıncıya Birebir Özel Mesaj Gönder"
+              aria-label="Özel Mesaj"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Viewers & Actions */}
@@ -605,84 +629,85 @@ export const LiveRoom: React.FC<LiveRoomProps> = ({
           )}
         </div>
 
-        {/* Quick Gift Row */}
-        <div className="mb-2">
-          <div className="flex items-center justify-between px-1 mb-1 text-[11px] text-pink-200">
-            <span className="font-bold flex items-center gap-1">
-              <span>🎁 Hediye Gönder</span>
-              <span className="text-[10px] text-amber-300 font-extrabold">
-                ({currentUser.coins} Jeton)
-              </span>
-            </span>
+        {/* BIGO TARZI ALT EYLEM BARI: Chat Girişi, Alkış, Hediye Sandığı & Beğeni */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Mesaj Girişi */}
+          <form onSubmit={handleSendMessage} className="flex-1 flex items-center relative">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Yayıncıya mesaj yaz..."
+              className="w-full pl-3.5 pr-9 py-2.5 rounded-full bg-black/65 border border-white/20 text-white placeholder-purple-200/50 text-xs focus:outline-none focus:border-pink-500 backdrop-blur-md"
+            />
             <button
-              onClick={onOpenStore}
-              className="text-[11px] font-extrabold text-amber-300 hover:underline flex items-center gap-0.5"
+              type="submit"
+              disabled={!chatInput.trim()}
+              className="absolute right-1.5 p-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white disabled:opacity-30 shadow transition-all"
+              aria-label="Mesaj Gönder"
             >
-              + Jeton Yükle
+              <Send className="w-3 h-3" />
             </button>
-          </div>
+          </form>
 
-          <div className="grid grid-cols-6 gap-1.5">
-            {GIFTS.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => handleSendGift(g)}
-                className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-black/60 hover:bg-pink-600/30 active:scale-95 border border-white/15 backdrop-blur-md transition-all group"
-                title={`${g.name} - ${g.cost} Jeton`}
-              >
-                <span className="text-xl group-hover:scale-125 transition-transform">
-                  {g.icon}
-                </span>
-                <span className="text-[10px] font-black text-amber-300 mt-0.5">
-                  {g.cost}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Chat input form */}
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-          <input
-            type="text"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Mesaj yaz veya soru sor..."
-            className="flex-1 px-3.5 py-2 rounded-full bg-black/65 border border-white/20 text-white placeholder-gray-400 text-xs focus:outline-none focus:border-pink-500 backdrop-blur-md"
-          />
-
-          <button
-            type="submit"
-            disabled={!chatInput.trim()}
-            className="p-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white disabled:opacity-40 shadow-lg shadow-pink-500/25 transition-all"
-            aria-label="Mesaj Gönder"
-          >
-            <Send className="w-3.5 h-3.5" />
-          </button>
-
+          {/* Alkış Butonu */}
           <button
             type="button"
             onClick={() => {
               playApplauseSound();
-              showToast('👏 Alkışlar gönderildi!');
+              showToast('👏 Alkışlar ve tezahürat gönderildi!');
             }}
-            className="p-2.5 rounded-full bg-purple-600/80 hover:bg-purple-600 text-white active:scale-90 shadow-lg shadow-purple-500/30 transition-transform"
+            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white active:scale-90 flex items-center justify-center transition-all shadow-md shrink-0 backdrop-blur-md"
             aria-label="Alkış Gönder"
             title="Alkış ve Tezahürat"
           >
-            <span className="text-sm">👏</span>
+            <span className="text-base">👏</span>
           </button>
 
+          {/* BIGO / TIKTOK TARZI HEDİYE SANDIĞI BUTONU */}
+          <button
+            type="button"
+            onClick={() => setIsGiftDrawerOpen(true)}
+            className="relative w-11 h-11 rounded-full bg-gradient-to-tr from-[#ff3385] via-[#ff5ca1] to-[#8d4bff] p-0.5 shadow-xl shadow-pink-500/40 active:scale-95 hover:scale-105 transition-all shrink-0 border border-white/30"
+            title="Hediye Gönder (Bigo Tarzı Hediye Çekmecesi)"
+            aria-label="Hediye Çekmecesini Aç"
+          >
+            <div className="w-full h-full rounded-full bg-[#1b122c] flex items-center justify-center text-xl">
+              🎁
+            </div>
+            <span className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-amber-400 text-black text-[8px] font-black uppercase shadow">
+              HEDİYE
+            </span>
+          </button>
+
+          {/* Kalp Beğeni Butonu */}
           <button
             type="button"
             onClick={handleLikeTap}
-            className="p-2.5 rounded-full bg-rose-600/80 hover:bg-rose-600 text-white active:scale-90 shadow-lg shadow-rose-500/30 transition-transform"
+            className="w-10 h-10 rounded-full bg-rose-600 hover:bg-rose-500 text-white active:scale-90 flex items-center justify-center transition-transform shadow-lg shadow-rose-600/30 shrink-0"
             aria-label="Kalp Gönder"
+            title="Beğen"
           >
-            <Heart className="w-3.5 h-3.5 fill-white text-white" />
+            <Heart className="w-4 h-4 fill-white text-white" />
           </button>
-        </form>
+        </div>
       </div>
+
+      {/* BIGO TARZI HEDİYE ÇEKMECESİ MODAL */}
+      <GiftDrawer
+        isOpen={isGiftDrawerOpen}
+        onClose={() => setIsGiftDrawerOpen(false)}
+        currentUser={currentUser}
+        onSendGift={(gift) => {
+          handleSendGift(gift);
+          setIsGiftDrawerOpen(false);
+        }}
+        onOpenStore={() => {
+          setIsGiftDrawerOpen(false);
+          onOpenStore();
+        }}
+        recipientName={stream.hostName}
+      />
 
       {/* Report Modal */}
       {isReporting && (
